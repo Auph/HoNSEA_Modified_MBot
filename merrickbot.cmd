@@ -1,6 +1,9 @@
 @echo off
-MODE CON: COLS=150 LINES=50
+MODE CON: COLS=150 LINES=500
 
-c:\python27\python.exe merrickbot -c c:\Users\Leon\Dropbox\Workdesk\HoNBot-Merrick\MerrickBotConfig\.honbot
-PAUSE
+:START
+echo honbot starting
+c:\python27\python.exe merrickbot -c c:\Users\{username}\{folder}\.honbot
+echo honbot exited, restarting
+GOTO START
 @echo on
