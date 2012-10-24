@@ -48,7 +48,7 @@ def run_honbot(config):
    while True: 
       try: connect(config)
       except KeyboardInterrupt: 
-         sys.exit()
+          sys.exit()
       except:
           print(sys.exc_type,sys.exc_value)
           print(sys.exc_traceback)

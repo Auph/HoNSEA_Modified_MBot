@@ -16,7 +16,7 @@ NA_MASTERSERVER = 'masterserver.hon.s2games.com'
 SEA_GARENA_MASTERSERVER = 'masterserver.garena.s2games.com'
 CIS_GARENA_MASTERSERVER = 'masterserver.cis.s2games.com'
 MASTERSERVER = None
-REGION = 'sea'
+REGION = 'na'
 
 def auth(login,password=None,pass_hash=None):
     if password is None and pass_hash is None:

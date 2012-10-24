@@ -11,8 +11,8 @@ def setup(bot):
 
 def periodic():
     global _bot
-    _bot.write_packet(ID.HON_CS_WHISPER, 'auph', 'TESTTESTTEST')
-	#_bot.write_packet(ID.HON_CS_GLOBAL_MESSAGE,'Greetings! Kick an early start into ^oHalloween^* with ^079Hook Madman^* and ^079Karabas Barabas Puppet Master^* at just ^y390 Gold Coins^* each! Grab them from my Store now!')
+    #_bot.write_packet(ID.HON_CS_GLOBAL_MESSAGE,'We are having an Urgent Maintenance to fix the connectivity issues players are currently experiencing. Game service will not be available until further notice. We apologize for the inconvenience and are working to restore the game service as soon as possible.')
+    #_bot.write_packet(ID.HON_CS_WHISPER, 'auph', 'TESTTESTTEST')
     # 10 = 10 seconds #
     threading.Timer(3600, periodic).start()
 

@@ -34,7 +34,7 @@ def create_default_config(fn):
    owner = 'yournickname'
 
    # exclude modules from loading
-   exclude = ['mumble','fixmm','logger']
+   exclude = ['mumble','fixmm','logger','forumcheck']
 
    # prefix for commands
    prefix = '[\.\!]'
@@ -120,7 +120,6 @@ def main(argv=None):
    # Step Three: Load The Configurations
 
    config_modules = []
-   
    for config_name in config_names(opts.config): 
       name = os.path.basename(config_name).split('.')[0] + '_config'
       module = imp.load_source(name, config_name)
@@ -141,12 +140,10 @@ def main(argv=None):
          sys.exit(1)
 
    # Step Five: Initialise And Run The Phennies
-   
+
    # @@ ignore SIGHUP
-   for config_module in config_modules:
+   for config_module in config_modules: 
       run(config_module) # @@ thread this
-   
-   
 
 if __name__ == '__main__': 
    abspath = os.path.abspath(__file__)

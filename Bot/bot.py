@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # (c) 2011 Anton Romanov
-# Modified by Leon 'Auph' Low.
+#
 #
 """
 """
 
-import os, imp, sys,threading
+import os, imp, sys,threading,inspect
 import re
 import socket, asyncore, asynchat
 from hon import masterserver,packets
@@ -14,6 +14,7 @@ from hon.honutils import normalize_nick
 import time
 from hon.honutils import normalize_nick
 from utils.dep import dep
+from utils.forum import VB
 
 home = os.getcwd() 
 
@@ -26,6 +27,9 @@ class Bot( asynchat.async_chat ):
         self.sending.acquire()
         asynchat.async_chat.initiate_send(self)
         self.sending.release()
+    def err(self, msg):
+        caller = inspect.stack()
+        print("Error: {0} ({1}:{2} - {3})".format(msg, caller[1][1], caller[1][2], time.strftime('%X')))
     def __init__( self,config ):
         asynchat.async_chat.__init__( self )   
         self.config = config
@@ -37,13 +41,26 @@ class Bot( asynchat.async_chat ):
         self.nick2id = {}
         self.chan2id = {}
         self.id2chan = {}
+        self.id2clan = {}
+        self.nick2clan = {}
         self.setup()
         self.sending = threading.Lock()
         self.cooldowns = {}
         self.channel_cooldowns = {}
+        self.clan_status = {}
+        self.user_status = {}
         #self.writelock = threading.Lock()
         #self.sleep = time.time() - 10
         #self.send_threshold = 1
+
+        try:
+            self.vb = VB( self.config.forumurl, self.config.forumapikey )
+            if not self.vb.Login( self.config.forumuser, self.config.forumpassword ):
+                print("Forum credentials are invaid")
+            else:
+                print("Logged into forum")
+        except:
+            print("Unable to connect to forum")
 
         self.ac_in_buffer_size = 2
         #self.ac_out_buffer_size = 2
@@ -75,10 +92,8 @@ class Bot( asynchat.async_chat ):
         print ('socket connected')
         self.set_terminator(2)
         self.got_len = False
-        #self.write(packets.pack(packets.ID.HON_CS_AUTH_INFO,self.account_id,
-            #self.cookie,self.ip,self.auth_hash,packets.ID.HON_PROTOCOL_VERSION,5,0))
         self.write_packet(packets.ID.HON_CS_AUTH_INFO,self.account_id,
-            self.cookie,self.ip,self.auth_hash,packets.ID.HON_PROTOCOL_VERSION,5,0)
+            self.cookie,self.ip,self.auth_hash,packets.ID.HON_PROTOCOL_VERSION,0x383,0,5,4,'lac',0)
 
     def collect_incoming_data( self, data ):
         self.buffer += data
@@ -322,14 +337,15 @@ class Bot( asynchat.async_chat ):
                     if origin[0] in [packets.ID.HON_SC_CHANNEL_MSG,packets.ID.HON_SC_CHANNEL_EMOTE]:
                         #prevent channel overspam
                         t = time.time()
-                        if origin[2] not in self.bot.channel_cooldowns or \
-                                ( origin[2] in self.bot.channel_cooldowns and \
-                                t - self.bot.channel_cooldowns[origin[2]]\
-                                >= self.bot.config.channel_cooldown):
-                            self.bot.channel_cooldowns[origin[2]] = t
-                        else:
-                            origin[0] = packets.ID.HON_SC_WHISPER
-                            origin[1] = input.nick
+                        if not input.admin:
+                            if origin[2] not in self.bot.channel_cooldowns or \
+                                    ( origin[2] in self.bot.channel_cooldowns and \
+                                    t - self.bot.channel_cooldowns[origin[2]]\
+                                    >= self.bot.config.channel_cooldown):
+                                self.bot.channel_cooldowns[origin[2]] = t
+                            else:
+                                origin[0] = packets.ID.HON_SC_WHISPER
+                                origin[1] = input.nick
 
                     if attr == 'reply':
                         if origin[0] in [packets.ID.HON_SC_CHANNEL_MSG,packets.ID.HON_SC_CHANNEL_EMOTE]:
@@ -352,8 +368,10 @@ class Bot( asynchat.async_chat ):
         return PhennyWrapper(self)
 
     def call(self, func, origin, phenny, *input): 
-        try: func(phenny, *input)
-        except Exception, e: 
+        try:
+            if func(phenny, *input) is False:
+                self.noauth(*input)
+        except Exception, e:
             self.error(origin)
 
     def input(self, origin, text, data, match): 
@@ -383,13 +401,13 @@ class Bot( asynchat.async_chat ):
                 else:
                     s.nick = None
                     s.account_id = None
-                s.admin = s.nick.lower() in self.config.admins
-                if hasattr(self.config,'officer_admin') and \
+                s.owner = s.nick == self.config.owner
+                s.admin = s.owner or s.nick.lower() in self.config.admins
+                if not s.admin and hasattr(self.config,'officer_admin') and \
                         self.config.officer_admin and s.account_id is not None and\
                         s.account_id in self.clan_roster and\
                         self.clan_roster[s.account_id]['rank'] != 'Member':
                         s.admin = True
-                s.owner = s.nick == self.config.owner
                 return s
         return CommandInput(text, origin, data, match)
 
@@ -432,9 +450,6 @@ class Bot( asynchat.async_chat ):
                                     t.start()
                                 else: self.call(func, list(origin), phenny, input)
 
-
-
-
-
-
-
+    def noauth(self, input):
+            self.write_packet(packets.ID.HON_SC_WHISPER, input.nick,'You do not have access to this command.')
+            return False
